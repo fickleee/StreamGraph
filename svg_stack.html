@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>svg-stacked</title>
+    <script src="d3.min.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="800" id="mainsvg" class="svgs" style='display: block; margin: 0 auto;'></svg>
+    <script>
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = {
+            top: 120,
+            right: 200,
+            bottom: 100,
+            left: 200
+        };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const g = svg.append('g').attr('id', 'maingroup')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`)
+            // const area = d3.area().x(d => xScale(d.data.year)).y1(d => yScale(d[1])).y0(d => yScale(d[0])).curve(d3.curveCardinal.tension(0.5));
+            // const pathh = g.append('path').attr('stroke-width', "3")
+            //     .attr('d', "M0,0 0,600 1200,600 80,40")
+            //     .attr('fill', "none")
+            //     .attr('stroke', "red")
+
+        d3.csv('NumOrdered.csv').then(async data => {
+            console.log(data)
+            const naiveKeys = ["Amanda", "Ashley", "Betty", "Deborah", "Dorothy", "Helen", "Linda", "Patricia"]
+            var naiveStack = Array.from({
+                length: naiveKeys.length + 1
+            }, () => new Array(data.length).fill(0))
+            var max_val = 0
+            const svg_width = 1200
+            const svg_height = 600
+            for (var i = 0; i < data.length; i++) {
+                var sum = 0
+                for (var j = 0; j < naiveKeys.length; j++) {
+                    sum = sum + Number(data[i][naiveKeys[j]])
+                    naiveStack[j + 1][i] = sum
+                }
+                max_val = Math.max(max_val, sum)
+            }
+            for (var i = 0; i <= naiveKeys.length; i++) {
+                for (var j = 0; j < data.length; j++) {
+                    naiveStack[i][j] = 600 - naiveStack[i][j] * svg_height / max_val
+                }
+            }
+            // console.log(naiveStack);
+            var axis = Array.from({
+                length: data.length
+            }).fill(0)
+            for (var i = 0; i < data.length; i++) {
+                axis[i] = i * svg_width / (data.length - 1)
+            }
+            // console.log(axis);
+            let color_arr = ['#bebada', '#fb8072', '#80b1d3', '#ffffb3', '#fdb462', '#b3de69', '#8dd3c7', '#fccde5']
+            for (var i = 1; i <= naiveKeys.length; i++) {
+                let path_str = ""
+                path_str += "M0," + naiveStack[i][0]
+                for (var j = 1; j < data.length; j++) {
+                    path_str += " L" + axis[j] + "," + naiveStack[i][j]
+                }
+                for (var j = data.length - 1; j >= 1; j--) {
+                    path_str += " L" + axis[j] + "," + naiveStack[i - 1][j]
+                }
+                console.log(path_str);
+                g.append('path').attr('id', naiveKeys[i - 1])
+                    .attr('d', path_str)
+                    .attr('stroke', 'none')
+                    .attr('fill', color_arr[i - 1])
+            }
+
+
+            // var naiveStack = d3.stack()
+            //     .keys(naiveKeys)
+            //     .order(d3.stackOrderNone)(data)
+            // console.log(naiveStack)
+            // const xValue = d => d.year
+            // const yScale = d3.scaleLinear()
+            //     .domain([0, d3.max(naiveStack, d => d3.max(d, subd => subd[1]))])
+            //     .range([innerHeight, 0]).nice()
+            // const xScale = d3.scaleBand()
+            //     .domain(data.map(d => xValue(d)))
+            //     .range([0, innerWidth])
+            //     .padding(0)
+            // const color = d3.scaleOrdinal()
+            //     .domain(naiveKeys)
+            //     .range(d3.schemeSet3)
+
+
+
+            // drawing axes;
+            // let yAxis = d3.axisLeft(yScale).tickValues([50000, 100000, 150000, 200000])
+
+            // let xAxis = d3.axisBottom(xScale).tickValues(["1880", "1900", "1920", "1940", "1960", "1980", "2000"])
+
+            // g.append('g').attr('id', 'yaxis').attr('class', "axis").call(yAxis);
+            // g.append('g').attr('id', 'xaxis').attr('class', "axis").call(xAxis).attr('transform', `translate(0, ${innerHeight})`);
+            // d3.selectAll('.tick text').attr('font-size', '2em');
+            // d3.selectAll('#xaxis text').attr('y', '10')
+
+            // define an area generator;
+            // let area = d3.area()
+            //     .x(d => xScale(d.data.year))
+            //     .y1(d => yScale(d[1])).y0(d => yScale(d[0]))
+            //     .curve(d3.curveLinear);
+
+            // // data-join;
+            // g.selectAll('.riverPath')
+            //     .data(naiveStack, d => d.key).join('path')
+            //     .attr('class', 'riverPath').attr('d', area).attr('fill', d => color(d.key));
+
+
+        })
+    </script>
+</body>
+
+</html>
+<style>
+
+</style>

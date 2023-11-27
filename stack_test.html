@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>stack_name</title>
+    <script src="d3.min.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="800" id="mainsvg" class="svgs" style='display: block; margin: 0 auto;'></svg>
+    <script>
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = {
+            top: 120,
+            right: 200,
+            bottom: 100,
+            left: 200
+        };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const g = svg.append('g').attr('id', 'maingroup')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        d3.csv('NumOrdered.csv').then(async data => {
+            console.log(data)
+            const naiveKeys = ["Amanda", "Ashley", "Betty", "Deborah", "Dorothy", "Helen", "Linda", "Patricia"]
+            var naiveStack = d3.stack()
+                .keys(naiveKeys)
+                .order(d3.stackOrderNone)(data)
+            console.log(naiveStack)
+            const xValue = d => d.year
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(naiveStack, d => d3.max(d, subd => subd[1]))])
+                .range([innerHeight, 0]).nice()
+            const xScale = d3.scaleBand()
+                .domain(data.map(d => xValue(d)))
+                .range([0, innerWidth])
+                .padding(0)
+                // console.log(data.map(d => xValue(d)))
+            const color = d3.scaleOrdinal()
+                .domain(naiveKeys)
+                .range(d3.schemeSet3)
+
+            // start to do data-join; 
+            g.selectAll('.datagroup').data(naiveStack).join('g')
+                .attr('class', 'datagroup')
+                .attr('fill', d => color(d.key))
+                .selectAll('.datarect').data(d => d).join('rect')
+                .attr('class', 'datarect')
+                .attr('y', d => yScale(d[1]))
+                .attr('x', d => xScale(xValue(d.data)))
+                .attr('height', d => yScale(d[0]) - yScale(d[1]))
+                .attr('width', xScale.bandwidth());
+
+            // drawing axes;
+            let yAxis = d3.axisLeft(yScale);
+            let xAxis = d3.axisBottom(xScale).tickValues(["1880", "1900", "1920", "1940", "1960", "1980", "2000"])
+            g.append('g').attr('id', 'yaxis').call(yAxis);
+            g.append('g').attr('id', 'xaxis').call(xAxis).attr('transform', `translate(0, ${innerHeight})`);
+            d3.selectAll('.tick text').attr('font-size', '2em');
+            d3.selectAll('#xaxis text').attr('y', '10')
+        })
+    </script>
+</body>
+
+</html>

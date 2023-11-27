@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>streamgraph</title>
+    <script src="d3.min.js"></script>
+    <link rel="stylesheet" href="d3-tip.css">
+    <script src="d3-v6-tip.js"></script>
+</head>
+
+<body>
+    <svg width="1600" height="600" id="mainsvg" class="svgs" style='display: block; margin: 0 auto;max-width: 100%; height: auto;'></svg>
+    <script>
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = {
+            top: 60,
+            right: 200,
+            bottom: 100,
+            left: 150
+        };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const g = svg.append('g').attr('id', 'maingroup')
+            .attr('transform', `translate(${margin.left}, ${margin.top})`);
+        const area = d3.area().x(d => xScale(d.data.year)).y1(d => yScale(d[1])).y0(d => yScale(d[0])).curve(d3.curveCardinal.tension(0.5));
+
+        d3.csv('NumOrdered.csv').then(async data => {
+            const naiveKeys = ["Amanda", "Ashley", "Betty", "Deborah", "Dorothy", "Helen", "Linda", "Patricia"]
+            var naiveStack = d3.stack()
+                .offset(d3.stackOffsetWiggle)
+                .keys(naiveKeys)
+                .order(d3.stackOrderNone)(data)
+            const xValue = d => d.year
+            const yScale = d3.scaleLinear()
+                .domain(d3.extent(naiveStack.flat(2)))
+                .rangeRound([height - margin.bottom, margin.top])
+            const xScale = d3.scaleBand()
+                .domain(data.map(d => xValue(d)))
+                .range([0, innerWidth])
+                .padding(0)
+            const color = d3.scaleOrdinal()
+                .domain(naiveKeys)
+                .range(d3.schemeSet3)
+
+            let num_text = svg.append('g').attr('id', 'nt')
+                .attr('transform', `translate(${margin.left + 10}, ${margin.top + 50})`)
+
+            num_text.append('text')
+                // .text("test")
+                .attr("class", "content")
+
+            const tip = d3.tip()
+                .attr('class', 'd3-tip')
+                .offset([-10, 0])
+                .html(function(event, d) {
+                    return d
+                });
+            svg.call(tip);
+
+            let cg = svg.append('g').attr('id', 'captionsgroup')
+                .attr('transform', `translate(${width - margin.right + 5}, ${margin.top + 50})`);
+
+            cg.selectAll('.captionrect').data(naiveKeys).join('rect')
+                .attr('class', 'captionsgroup')
+                .attr('y', (d, i) => i * 32)
+                .attr('width', 40)
+                .attr('height', 20)
+                .attr('fill', d => color(d))
+
+            cg.selectAll('.captiontext').data(naiveKeys).join('text')
+                .attr('class', 'captiontext')
+                .attr('y', (d, i) => i * 32 + 15)
+                .attr('x', 42)
+                .attr('width', 40)
+                .attr('height', 20)
+                .attr('font-size', '1.2em')
+                .text(d => d)
+
+            // drawing axes;
+            // let yAxis = d3.axisLeft(yScale).tickValues([50000, 100000, 150000, 200000])
+            let yAxis = d3.axisLeft(yScale).ticks(height / 80)
+
+            let xAxis = d3.axisBottom(xScale).tickValues(["1880", "1900", "1920", "1940", "1960", "1980", "2000"])
+
+            g.append('g').attr('id', 'yaxis').attr('class', "axis").call(yAxis)
+                .call(g => g.select(".domain").remove())
+                .call(g => g.selectAll(".tick line").clone()
+                    .attr("x2", width - margin.left - margin.right)
+                    .attr("stroke-opacity", 0.1));
+            g.append('g').attr('id', 'xaxis').attr('class', "axis").call(xAxis).attr('transform', `translate(0, ${height - margin.bottom})`)
+                .call(g => g.select(".domain").remove())
+            d3.selectAll('.tick text').attr('font-size', '2em');
+            d3.selectAll('#xaxis text').attr('y', '10')
+
+            // define an area generator;
+            let area = d3.area()
+                .x(d => xScale(d.data.year))
+                .y1(d => yScale(d[1])).y0(d => yScale(d[0]))
+                .curve(d3.curveCatmullRom);
+
+            // data-join;
+            g.selectAll('.riverPath')
+                .data(naiveStack, d => d.key).join('path')
+                .attr('class', 'riverPath').attr('d', area).attr('fill', d => color(d.key))
+                .on('mousemove', function(d) {
+                    console.log(this);
+                    d3.select(this)
+                        .attr("opacity", 0.5)
+                        .attr("stroke", "white")
+                        .attr("stroke-width", 10)
+                })
+                .on('mouseout', function(d) {
+                    d3.select(this)
+                        .attr("opacity", 1)
+                        .attr("stroke", this.color)
+                        .attr("stroke-width", 1)
+                })
+        })
+    </script>
+</body>
+
+</html>
+<style>
+    .axis line {
+        fill: none;
+        stroke: black;
+        shape-rendering: crispEdges;
+    }
+    
+    .axis text {
+        font-family: sans-serif;
+        font-size: 15px;
+    }
+</style>
